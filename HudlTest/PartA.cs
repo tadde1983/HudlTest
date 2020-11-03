@@ -3,6 +3,8 @@ using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 
 namespace HudlTest
@@ -11,14 +13,24 @@ namespace HudlTest
     public class PartA
     { 
 
-        protected IWebDriver driver;
-        protected WebDriverWait waiter;
+        IWebDriver driver;
+        WebDriverWait wait;
+        ChromeOptions chromeoptions;
         public TestContext TestContext { get; set; }
+
+        [ClassInitialize]
+
+        public static void ClassInit(TestContext context)
+        {
+            //Delete Temp browser directory
+            if (Directory.Exists(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\" + "tempdata"))
+                Directory.Delete(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\" + "tempdata", true);
+        }
 
         [TestInitialize]
         public void CreateDriver()
         {
-            ChromeOptions chromeoptions = new ChromeOptions();
+            chromeoptions = new ChromeOptions();
             chromeoptions.AddArguments("--disable-extensions");
             chromeoptions.AddArguments("--disable-gpu");
             chromeoptions.AddArguments("--disable-infobars");
@@ -27,11 +39,21 @@ namespace HudlTest
             chromeoptions.AddArguments("--user-data-dir=" + Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\" + "tempdata");
             chromeoptions.AddArguments("--no-sandbox");
             driver = new ChromeDriver(chromeoptions);
-            waiter = new WebDriverWait(driver, new TimeSpan(0, 0, 5));
+            wait = new WebDriverWait(driver, new TimeSpan(0, 0, 5));
+            driver.Manage().Timeouts().ImplicitWait = new TimeSpan(0, 0, 10);
+            driver.Manage().Timeouts().PageLoad = new TimeSpan(0, 0, 10);
         }
 
         [TestCleanup]
         public void QuitDriver()
+        {
+            
+            DisposeDriver();
+
+            ClearTempdir();
+        }
+
+        private void DisposeDriver()
         {
             if (driver != null)
             {
@@ -66,98 +88,99 @@ namespace HudlTest
             }
         }
 
+        private void ClearTempdir()
+        {
+           
+            Directory.Delete(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\" + "tempdata",true);
+        }
+
         [TestMethod]
         ///<summary>
         /// Verify if a user will be able to login with a valid username and valid password.
         ///</summary>
-        public void LoginWithValidCredentials()
+        public void LoginCorrectCredentials()
         {
-            //Go To Login Page hudl.com
-            GoToHudlPage();
-
-            GoToLoginPage();
-
             //Execute Login Process
             DoLogin("tadde1983@gmail.com", "TestHudl1");
-            
-            //Waiting for the Avatar element is Displayed (timeout 5s)
-            waiter.Until(d => d.FindElements(By.ClassName("uni-avatar__initials")).Count(e => e.Displayed) > 0);
+
+            //waiting for the avatar element
+            wait.Until(w => w.FindElements(By.ClassName("uni-avatar__initials")).Count(e=>e.Displayed)> 0);
 
             //Check if the Avatar Initials are correctly ST
             Assert.IsTrue(driver.FindElement(By.ClassName("uni-avatar__initials")).Text.Equals("ST"), "LogIn - Something went wrong during the login process, 'ST' initials are not correctly displayed");
 
         }
 
-       
+
         [TestMethod]
         ///<summary>
         /// Verify if a user cannot login with a valid username and an invalid password.
         ///</summary>
-        public void LoginWithInvalidPasswordCredentials()
+        public void LoginInvalidPasswordCredentials()
         {
-            //Go To Login Page hudl.com
-            GoToHudlPage();
-
-            GoToLoginPage();
-
+            //Execute Login Process
             DoLogin("tadde1983@gmail.com", "TestHudl");
 
+            //waiting for the error message
+            wait.Until(w => w.FindElements(By.XPath("//div[@class='login-error-container']/p")).Count(e => e.Displayed && e.Text.Length>0) > 0);
 
-            waiter.Until(d => d.FindElements(By.ClassName("login-error-container")).Count(e => e.Displayed) > 0);
-
-            Assert.IsTrue(driver.FindElement(By.ClassName("login-error-container")).FindElement(By.TagName("p")).Text.StartsWith("We didn't recognize that email and/or password."), " No error Message on Wrong Login credentials");
+            //Check Login Error Message
+            Assert.IsTrue(driver.FindElement(By.XPath("//div[@class='login-error-container']/p")).Text.StartsWith("We didn't recognize that email and/or password."), " No error Message on Wrong Login credentials");
         }
 
         [TestMethod]
         ///<summary>
         /// Verify the login page for both, when the field is blank and Login button is clicked.
         ///</summary>
-        public void LoginWithNoCredentials()
+        public void LoginNoCredentials()
         {
-            //Go To Login Page hudl.com
-            GoToHudlPage();
-
-            GoToLoginPage();
-
+            //Execute Login Process
             DoLogin("", "");
 
-            waiter.Until(d => d.FindElements(By.ClassName("login-error-container")).Count(e => e.Displayed) > 0);
+            //waiting for the error message
+            wait.Until(w => w.FindElements(By.XPath("//div[@class='login-error-container']/p")).Count(e => e.Displayed && e.Text.Length > 0) > 0);
 
-            Assert.IsTrue(driver.FindElement(By.ClassName("login-error-container")).FindElement(By.TagName("p")).Text.StartsWith("We didn't recognize that email and/or password."), " No error Message on Wrong Login credentials");
+            //Check Login Error Message
+            Assert.IsTrue(driver.FindElement(By.XPath("//div[@class='login-error-container']/p")).Text.StartsWith("We didn't recognize that email and/or password."), " No error Message on Wrong Login credentials");
         }
 
         [TestMethod]
         ///<summary>
         /// Verify the login page when the field password is blank and Login button is clicked.
         ///</summary>
-        public void LoginWithNoPassword()
+        public void LoginNoPassword()
         {
-            //Go To Login Page hudl.com
-            GoToHudlPage();
-
-            GoToLoginPage();
-
+            //Execute Login Process
             DoLogin("tadde1983@gmail.com", "");
 
-            waiter.Until(d => d.FindElements(By.ClassName("login-error-container")).Count(e => e.Displayed) > 0);
+            //waiting for the error message
+            wait.Until(w => w.FindElements(By.XPath("//div[@class='login-error-container']/p")).Count(e => e.Displayed && e.Text.Length > 0) > 0);
 
-            Assert.IsTrue(driver.FindElement(By.ClassName("login-error-container")).FindElement(By.TagName("p")).Text.StartsWith("We didn't recognize that email and/or password."), " No error Message on Wrong Login credentials");
+            //Check Login Error Message
+            Assert.IsTrue(driver.FindElement(By.XPath("//div[@class='login-error-container']/p")).Text.StartsWith("We didn't recognize that email and/or password."), " No error Message on Wrong Login credentials");
         }
 
         [TestMethod]
         ///<summary>
         /// Verify the login page when the field password is blank and Login button is clicked.
         ///</summary>
-        public void LoginRememberMeCredentials()
+        public void LoginVerifyRememberMeCredentials()
         {
-            //Go To Login Page hudl.com
+            //Execute Login Process
+            DoLogin("tadde1983@gmail.com", "TestHudl1" ,true);
+
+            //Check if the Avatar Initials are correctly ST
+            Assert.IsTrue(driver.FindElement(By.ClassName("uni-avatar__initials")).Text.Equals("ST"), "LogIn - Something went wrong during the login process, 'ST' initials are not correctly displayed");
+
+            DisposeDriver();
+
+            CreateDriver();
+
             GoToHudlPage();
 
-            GoToLoginPage();
+            //Check if the Avatar Initials are correctly ST
+            Assert.IsTrue(driver.FindElement(By.ClassName("uni-avatar__initials")).Text.Equals("ST"), "LogIn 'Remember me' functionality is not working properly");
 
-            DoLogin("tadde1983@gmail.com", "TestHudl1", true);
-
-            GoToHudlPage();
         }
 
         private void GoToHudlPage()
@@ -168,14 +191,16 @@ namespace HudlTest
 
         public void GoToLoginPage()
         {
-            waiter.Until(d => d.FindElements(By.TagName("a")).Count(e => e.Displayed && e.Text.Equals("Log in")) > 0);
             driver.FindElements(By.TagName("a")).Where(e => e.Displayed && e.Text.Equals("Log in")).First().Click();
         }
 
         private void DoLogin(string username, string password, bool RememberCredentials=false)
         {
-            //Waiting for textbox (ID=email) is ready (visible and interactable) in the DOM of the page
-            waiter.Until(d => d.FindElements(By.Id("email")).Count(e => e.Displayed) > 0);
+            //Go To Hudl Home Page
+            GoToHudlPage();
+
+            //Go To Hudl Login Page
+            GoToLoginPage();
 
             //Clear All Fields
             driver.FindElement(By.Id("email")).Clear();
@@ -200,6 +225,8 @@ namespace HudlTest
             }
             //Click on the login button
             driver.FindElement(By.Id("logIn")).Click();
+
+            
         }
     }
 }
