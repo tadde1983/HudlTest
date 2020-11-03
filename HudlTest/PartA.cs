@@ -24,6 +24,7 @@ namespace HudlTest
             chromeoptions.AddArguments("--disable-infobars");
             chromeoptions.AddArgument("--start-maximized");
             chromeoptions.AddAdditionalCapability("useAutomationExtension", true);
+            chromeoptions.AddArguments("--user-data-dir=" + Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\" + "tempdata");
             chromeoptions.AddArguments("--no-sandbox");
             driver = new ChromeDriver(chromeoptions);
             waiter = new WebDriverWait(driver, new TimeSpan(0, 0, 5));
@@ -72,7 +73,9 @@ namespace HudlTest
         public void LoginWithValidCredentials()
         {
             //Go To Login Page hudl.com
-            driver.Navigate().GoToUrl("https://www.hudl.com/login");
+            GoToHudlPage();
+
+            GoToLoginPage();
 
             //Execute Login Process
             DoLogin("tadde1983@gmail.com", "TestHudl1");
@@ -85,6 +88,7 @@ namespace HudlTest
 
         }
 
+       
         [TestMethod]
         ///<summary>
         /// Verify if a user cannot login with a valid username and an invalid password.
@@ -92,7 +96,9 @@ namespace HudlTest
         public void LoginWithInvalidPasswordCredentials()
         {
             //Go To Login Page hudl.com
-            driver.Navigate().GoToUrl("https://www.hudl.com/login");
+            GoToHudlPage();
+
+            GoToLoginPage();
 
             DoLogin("tadde1983@gmail.com", "TestHudl");
 
@@ -109,7 +115,9 @@ namespace HudlTest
         public void LoginWithNoCredentials()
         {
             //Go To Login Page hudl.com
-            driver.Navigate().GoToUrl("https://www.hudl.com/login");
+            GoToHudlPage();
+
+            GoToLoginPage();
 
             DoLogin("", "");
 
@@ -125,7 +133,9 @@ namespace HudlTest
         public void LoginWithNoPassword()
         {
             //Go To Login Page hudl.com
-            driver.Navigate().GoToUrl("https://www.hudl.com/login");
+            GoToHudlPage();
+
+            GoToLoginPage();
 
             DoLogin("tadde1983@gmail.com", "");
 
@@ -134,8 +144,35 @@ namespace HudlTest
             Assert.IsTrue(driver.FindElement(By.ClassName("login-error-container")).FindElement(By.TagName("p")).Text.StartsWith("We didn't recognize that email and/or password."), " No error Message on Wrong Login credentials");
         }
 
+        [TestMethod]
+        ///<summary>
+        /// Verify the login page when the field password is blank and Login button is clicked.
+        ///</summary>
+        public void LoginRememberMeCredentials()
+        {
+            //Go To Login Page hudl.com
+            GoToHudlPage();
 
-        private void DoLogin(string username, string password)
+            GoToLoginPage();
+
+            DoLogin("tadde1983@gmail.com", "TestHudl1", true);
+
+            GoToHudlPage();
+        }
+
+        private void GoToHudlPage()
+        {
+            driver.Navigate().GoToUrl("https://www.hudl.com");
+            
+        }
+
+        public void GoToLoginPage()
+        {
+            waiter.Until(d => d.FindElements(By.TagName("a")).Count(e => e.Displayed && e.Text.Equals("Log in")) > 0);
+            driver.FindElements(By.TagName("a")).Where(e => e.Displayed && e.Text.Equals("Log in")).First().Click();
+        }
+
+        private void DoLogin(string username, string password, bool RememberCredentials=false)
         {
             //Waiting for textbox (ID=email) is ready (visible and interactable) in the DOM of the page
             waiter.Until(d => d.FindElements(By.Id("email")).Count(e => e.Displayed) > 0);
@@ -154,6 +191,12 @@ namespace HudlTest
             {
                 var text=((IJavaScriptExecutor)driver).ExecuteScript("return arguments[0].value;", driver.FindElement(By.Id("password"))).ToString();
                 Assert.IsFalse(text.Equals(driver.FindElement(By.Id("password")).Text), "PASSWORD IS NOT MASQUERADE!");
+            }
+
+            if (RememberCredentials)
+            {
+               
+                ((IJavaScriptExecutor)driver).ExecuteScript("return arguments[0].click();", driver.FindElement(By.Id("remember-me")));
             }
             //Click on the login button
             driver.FindElement(By.Id("logIn")).Click();
