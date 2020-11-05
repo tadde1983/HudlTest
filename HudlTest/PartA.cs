@@ -19,7 +19,6 @@ namespace HudlTest
         public TestContext TestContext { get; set; }
 
         [ClassInitialize]
-
         public static void ClassInit(TestContext context)
         {
             //Delete Temp browser directory
@@ -39,9 +38,9 @@ namespace HudlTest
             chromeoptions.AddArguments("--user-data-dir=" + Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\" + "tempdata");
             chromeoptions.AddArguments("--no-sandbox");
             driver = new ChromeDriver(chromeoptions);
-            wait = new WebDriverWait(driver, new TimeSpan(0, 0, 5));
-            driver.Manage().Timeouts().ImplicitWait = new TimeSpan(0, 0, 10);
-            driver.Manage().Timeouts().PageLoad = new TimeSpan(0, 0, 10);
+            wait = new WebDriverWait(driver, new TimeSpan(0, 0, 30));
+            driver.Manage().Timeouts().ImplicitWait = new TimeSpan(0, 0, 30);
+            driver.Manage().Timeouts().PageLoad = new TimeSpan(0, 0, 30);
         }
 
         [TestCleanup]
